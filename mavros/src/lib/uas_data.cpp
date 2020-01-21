@@ -231,7 +231,7 @@ void UAS::add_static_transform(const std::string &frame_id, const std::string &c
 {
 	geometry_msgs::TransformStamped static_transform;
 
-	static_transform.header.stamp = ros::Time::now();
+	static_transform.header.stamp = ros::Time(0);//ros::Time::now();
 	static_transform.header.frame_id = frame_id;
 	static_transform.child_frame_id = child_id;
 	tf::transformEigenToMsg(tr, static_transform.transform);
@@ -244,7 +244,7 @@ void UAS::publish_static_transform(const std::string &frame_id, const std::strin
 {
 	geometry_msgs::TransformStamped static_transformStamped;
 
-	static_transformStamped.header.stamp = ros::Time::now();
+	static_transformStamped.header.stamp = ros::Time(0);//ros::Time::now();
 	static_transformStamped.header.frame_id = frame_id;
 	static_transformStamped.child_frame_id = child_id;
 	tf::transformEigenToMsg(tr, static_transformStamped.transform);
