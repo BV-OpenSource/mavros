@@ -124,6 +124,7 @@ add_library(mavros_plugins
   src/plugins/home_position.cpp
   src/plugins/imu.cpp
   src/plugins/local_position.cpp
+  src/plugins/mag_calibration_status.cpp
   src/plugins/manual_control.cpp
   src/plugins/param.cpp
   src/plugins/rc_io.cpp
