@@ -39,6 +39,7 @@ public:
 	{
 		PluginBase::initialize(uas_);
 		mcs_pub = mcs_nh.advertise<std_msgs::UInt8>("status", 2, true);
+		mcr_pub = mcs_nh.advertise<std_msgs::UInt8>("report", 2, true);
 	}
 
 	/**
@@ -53,16 +54,19 @@ public:
 		return {
 			/* automatic message deduction by second argument */
 			make_handler(&MagCalStatusPlugin::handle_status),
+            make_handler(&MagCalStatusPlugin::handle_report),
 		};
 	}
 
 private:
 	ros::NodeHandle mcs_nh;
 	ros::Publisher mcs_pub;
-	uint8_t _rgCompassCalProgress[3];
+    ros::Publisher mcr_pub;
+	uint8_t _rgCompassCalProgress[3] = {0};
 
 	void handle_status(const mavlink::mavlink_message_t *msg, mavlink::ardupilotmega::msg::MAG_CAL_PROGRESS &mp) {
-//		ROS_INFO_STREAM_NAMED("MagCalStatus", "MagCalStatus::handle_heartbeat: " << mp.to_yaml());
+		//ROS_INFO_STREAM_NAMED("MagCalStatus", "MagCalStatus::handle_heartbeat: " << mp.to_yaml());
+
 		auto mcs = boost::make_shared<std_msgs::UInt8>();
 
 		// How many compasses are we calibrating?
@@ -81,6 +85,12 @@ private:
 		mcs->data = (_rgCompassCalProgress[0] + _rgCompassCalProgress[1] + _rgCompassCalProgress[2]);
 
 		mcs_pub.publish(mcs);
+	}
+    void handle_report(const mavlink::mavlink_message_t *msg, mavlink::ardupilotmega::msg::MAG_CAL_REPORT &mr) {
+        //ROS_INFO_STREAM_NAMED("MagCalReport", "MagCalReport:: " << mr.to_yaml());
+        auto mcr = boost::make_shared<std_msgs::UInt8>();
+        mcr->data = mr.cal_status;
+        mcr_pub.publish(mcr);
 	}
 };
 
