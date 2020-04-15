@@ -1,5 +1,5 @@
 <library path="lib/libmavros_plugins">
-	<!--<class name="dummy" type="mavros::std_plugins::DummyPlugin" base_class_type="mavros::plugin::PluginBase">
+<!--	<class name="dummy" type="mavros::std_plugins::DummyPlugin" base_class_type="mavros::plugin::PluginBase">
 		<description>Dummy test plugin.</description>
 	</class>-->
 	<class name="sys_status" type="mavros::std_plugins::SystemStatusPlugin" base_class_type="mavros::plugin::PluginBase">
@@ -74,4 +74,9 @@
 	<class name="wind_estimation" type="mavros::std_plugins::WindEstimationPlugin" base_class_type="mavros::plugin::PluginBase">
 		<description>Publish wind estimates</description>
 	</class>
+
+	<class name="mag_calibration_status" type="mavros::std_plugins::MagCalStatusPlugin" base_class_type="mavros::plugin::PluginBase">
+		<description>Send calibration status to ROS.</description>
+	</class>
+
 </library>
