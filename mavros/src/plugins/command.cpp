@@ -100,7 +100,7 @@ private:
 	ros::NodeHandle cmd_nh;
 	ros::ServiceServer command_long_srv;
 	ros::ServiceServer command_int_srv;
-  ros::ServiceServer command_ack_srv;
+    ros::ServiceServer command_ack_srv;
 	ros::ServiceServer arming_srv;
 	ros::ServiceServer set_home_srv;
 	ros::ServiceServer takeoff_srv;

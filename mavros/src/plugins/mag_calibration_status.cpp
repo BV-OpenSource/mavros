@@ -63,10 +63,10 @@ private:
 	ros::Publisher mcs_pub;
     ros::Publisher mcr_pub;
 	uint8_t _rgCompassCalProgress[3] = {0};
-
+	bool calibration=true;
+    //Send progress of magnetometer calibration
 	void handle_status(const mavlink::mavlink_message_t *msg, mavlink::ardupilotmega::msg::MAG_CAL_PROGRESS &mp) {
 		//ROS_INFO_STREAM_NAMED("MagCalStatus", "MagCalStatus::handle_heartbeat: " << mp.to_yaml());
-
 		auto mcs = boost::make_shared<std_msgs::UInt8>();
 
 		// How many compasses are we calibrating?
@@ -86,11 +86,15 @@ private:
 
 		mcs_pub.publish(mcs);
 	}
+	//Send report after calibration is done
     void handle_report(const mavlink::mavlink_message_t *msg, mavlink::ardupilotmega::msg::MAG_CAL_REPORT &mr) {
         //ROS_INFO_STREAM_NAMED("MagCalReport", "MagCalReport:: " << mr.to_yaml());
-        auto mcr = boost::make_shared<std_msgs::UInt8>();
-        mcr->data = mr.cal_status;
-        mcr_pub.publish(mcr);
+       if(calibration) {
+               auto mcr = boost::make_shared<std_msgs::UInt8>();
+               mcr->data = mr.cal_status;
+               mcr_pub.publish(mcr);
+               calibration=false;
+       }
 	}
 };
 

@@ -25,8 +25,8 @@
 #include <mavros_msgs/VehicleInfo.h>
 #include <mavros_msgs/VehicleInfoGet.h>
 #include <mavros_msgs/MessageInterval.h>
-
-
+#include "std_msgs/String.h"
+#include "std_msgs/Bool.h"
 #ifdef HAVE_SENSOR_MSGS_BATTERYSTATE_MSG
 #include <sensor_msgs/BatteryState.h>
 using BatteryMsg = sensor_msgs::BatteryState;
@@ -482,6 +482,9 @@ public:
 
 		state_pub = nh.advertise<mavros_msgs::State>("state", 10, true);
 		extended_state_pub = nh.advertise<mavros_msgs::ExtendedState>("extended_state", 10);
+        fcuE_pub = nh.advertise<std_msgs::String>("fcuE", 2, true);
+        apmInit_pub = nh.advertise<std_msgs::Bool>("apm/init", 2, true);
+        acc_pub = nh.advertise<std_msgs::String>("accl/status", 2, true);
 		batt_pub = nh.advertise<BatteryMsg>("battery", 10);
 		statustext_pub = nh.advertise<mavros_msgs::StatusText>("statustext/recv", 10);
 		statustext_sub = nh.subscribe("statustext/send", 10, &SystemStatusPlugin::statustext_cb, this);
@@ -525,10 +528,15 @@ private:
 	ros::Publisher batt_pub;
 	ros::Publisher statustext_pub;
 	ros::Subscriber statustext_sub;
+    ros::Publisher fcuE_pub;
+    ros::Publisher apmInit_pub;
+    ros::Publisher acc_pub;
 	ros::ServiceServer rate_srv;
 	ros::ServiceServer mode_srv;
 	ros::ServiceServer vehicle_info_get_srv;
 	ros::ServiceServer message_interval_srv;
+    std_msgs::String msg_err;
+    std_msgs::Bool msg_apm;
 
 	MAV_TYPE conn_heartbeat_mav_type;
 	static constexpr int RETRIES_COUNT = 6;
@@ -594,6 +602,15 @@ private:
 		case enum_value(MAV_SEVERITY::CRITICAL):
 		case enum_value(MAV_SEVERITY::ERROR):
 			ROS_ERROR_STREAM_NAMED("fcu", "FCU: " << text);
+			//Send information to the platform regarding calibration of accelarometer
+			if(text.find("Calibration")!=std::string::npos || text.find("Place")!=std::string::npos){
+                msg_err.data = text;
+                acc_pub.publish(msg_err);
+			}else {
+			    //Send information to the platform regarding fcu errors
+                msg_err.data = text;
+                fcuE_pub.publish(msg_err);
+			}
 			break;
 		case enum_value(MAV_SEVERITY::WARNING):
 		case enum_value(MAV_SEVERITY::NOTICE):
@@ -601,6 +618,11 @@ private:
 			break;
 		case enum_value(MAV_SEVERITY::INFO):
 			ROS_INFO_STREAM_NAMED("fcu", "FCU: " << text);
+			//Send information to platform after ardupilot initiates
+			if(text.find("Frame:")!=std::string::npos){
+                msg_apm.data = true;
+                apmInit_pub.publish(msg_apm);
+			}
 			break;
 		case enum_value(MAV_SEVERITY::DEBUG):
 			ROS_DEBUG_STREAM_NAMED("fcu", "FCU: " << text);
