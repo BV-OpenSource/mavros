@@ -17,7 +17,7 @@
 
 #include <mavros/mavros_plugin.h>
 #include <std_msgs/UInt8.h>
-
+#include <mavros_msgs/MagnetometerReporter.h>
 namespace mavros {
 namespace std_plugins {
 
@@ -39,7 +39,7 @@ public:
 	{
 		PluginBase::initialize(uas_);
 		mcs_pub = mcs_nh.advertise<std_msgs::UInt8>("status", 2, true);
-		mcr_pub = mcs_nh.advertise<std_msgs::UInt8>("report", 2, true);
+		mcr_pub = mcs_nh.advertise<mavros_msgs::MagnetometerReporter>("report", 2, true);
 	}
 
 	/**
@@ -66,7 +66,7 @@ private:
 	bool calibration=true;
     //Send progress of magnetometer calibration
 	void handle_status(const mavlink::mavlink_message_t *msg, mavlink::ardupilotmega::msg::MAG_CAL_PROGRESS &mp) {
-		//ROS_INFO_STREAM_NAMED("MagCalStatus", "MagCalStatus::handle_heartbeat: " << mp.to_yaml());
+		ROS_INFO_STREAM_NAMED("MagCalStatus", "MagCalStatus::handle_heartbeat: " << mp.to_yaml());
 		auto mcs = boost::make_shared<std_msgs::UInt8>();
 
 		// How many compasses are we calibrating?
@@ -88,10 +88,11 @@ private:
 	}
 	//Send report after calibration is done
     void handle_report(const mavlink::mavlink_message_t *msg, mavlink::ardupilotmega::msg::MAG_CAL_REPORT &mr) {
-        //ROS_INFO_STREAM_NAMED("MagCalReport", "MagCalReport:: " << mr.to_yaml());
+        ROS_INFO_STREAM_NAMED("MagCalReport", "MagCalReport:: " << mr.to_yaml());
        if(calibration) {
-               auto mcr = boost::make_shared<std_msgs::UInt8>();
-               mcr->data = mr.cal_status;
+               auto     mcr = boost::make_shared<mavros_msgs::MagnetometerReporter>();
+               mcr->report = mr.cal_status;
+               mcr->confidence =mr.orientation_confidence;
                mcr_pub.publish(mcr);
                calibration=false;
        }
