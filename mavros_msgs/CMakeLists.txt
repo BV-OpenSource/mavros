@@ -30,6 +30,7 @@ add_message_files(
   LandingTarget.msg
   LogData.msg
   LogEntry.msg
+  MagnetometerReporter.msg
   ManualControl.msg
   Mavlink.msg
   MountControl.msg
