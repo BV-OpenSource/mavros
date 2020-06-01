@@ -619,7 +619,7 @@ private:
 		case enum_value(MAV_SEVERITY::INFO):
 			ROS_INFO_STREAM_NAMED("fcu", "FCU: " << text);
 			//Send information to platform after ardupilot initiates
-			if(text.find("Frame:")!=std::string::npos){
+			if(text.find("Initialising APM")!=std::string::npos){
                 msg_apm.data = true;
                 apmInit_pub.publish(msg_apm);
 			}
