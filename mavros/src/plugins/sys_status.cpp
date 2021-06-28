@@ -23,10 +23,13 @@
 #include <mavros_msgs/SetMode.h>
 #include <mavros_msgs/CommandLong.h>
 #include <mavros_msgs/StatusText.h>
+#include <mavros_msgs/SystemStatus.h>
 #include <mavros_msgs/VehicleInfo.h>
 #include <mavros_msgs/VehicleInfoGet.h>
 #include <mavros_msgs/MessageInterval.h>
 
+#include "std_msgs/String.h"
+#include "std_msgs/Bool.h"
 
 #ifdef HAVE_SENSOR_MSGS_BATTERYSTATE_MSG
 #include <sensor_msgs/BatteryState.h>
@@ -487,8 +490,12 @@ public:
 				&SystemStatusPlugin::autopilot_version_cb, this);
 		autopilot_version_timer.stop();
 
+        system_status_pub = nh.advertise<mavros_msgs::SystemStatus>("system_status", 10, true);
 		state_pub = nh.advertise<mavros_msgs::State>("state", 10, true);
 		extended_state_pub = nh.advertise<mavros_msgs::ExtendedState>("extended_state", 10);
+        fcuE_pub = nh.advertise<std_msgs::String>("fcuE", 2, true);
+        apmInit_pub = nh.advertise<std_msgs::Bool>("apm/init", 2, true);
+        acc_pub = nh.advertise<std_msgs::String>("accl/status", 2, true);
 		batt_pub = nh.advertise<BatteryMsg>("battery", 10);
 		estimator_status_pub = nh.advertise<mavros_msgs::EstimatorStatus>("estimator_status", 10);
 		statustext_pub = nh.advertise<mavros_msgs::StatusText>("statustext/recv", 10);
@@ -529,16 +536,24 @@ private:
 	ros::Timer heartbeat_timer;
 	ros::Timer autopilot_version_timer;
 
+    ros::Publisher system_status_pub;
 	ros::Publisher state_pub;
 	ros::Publisher extended_state_pub;
 	ros::Publisher batt_pub;
 	ros::Publisher estimator_status_pub;
 	ros::Publisher statustext_pub;
+    ros::Publisher fcuE_pub;
+    ros::Publisher apmInit_pub;
+    ros::Publisher acc_pub;
 	ros::Subscriber statustext_sub;
 	ros::ServiceServer rate_srv;
 	ros::ServiceServer mode_srv;
 	ros::ServiceServer vehicle_info_get_srv;
 	ros::ServiceServer message_interval_srv;
+
+    std_msgs::String msg_err;
+    std_msgs::Bool msg_apm;
+
 
 	MAV_TYPE conn_heartbeat_mav_type;
 	static constexpr int RETRIES_COUNT = 6;
@@ -604,6 +619,15 @@ private:
 		case enum_value(MAV_SEVERITY::CRITICAL):
 		case enum_value(MAV_SEVERITY::ERROR):
 			ROS_ERROR_STREAM_NAMED("fcu", "FCU: " << text);
+            //Send information to the platform regarding calibration of accelarometer
+            if(text.find("Calibration")!=std::string::npos || text.find("Place")!=std::string::npos){
+                msg_err.data = text;
+                acc_pub.publish(msg_err);
+            }else {
+                //Send information to the platform regarding fcu errors
+                msg_err.data = text;
+                fcuE_pub.publish(msg_err);
+            }
 			break;
 		case enum_value(MAV_SEVERITY::WARNING):
 		case enum_value(MAV_SEVERITY::NOTICE):
@@ -611,6 +635,11 @@ private:
 			break;
 		case enum_value(MAV_SEVERITY::INFO):
 			ROS_INFO_STREAM_NAMED("fcu", "FCU: " << text);
+            //Send information to platform after ardupilot initiates
+            if(text.find("Frame:")!=std::string::npos){
+                msg_apm.data = true;
+                apmInit_pub.publish(msg_apm);
+            }
 			break;
 		case enum_value(MAV_SEVERITY::DEBUG):
 			ROS_DEBUG_STREAM_NAMED("fcu", "FCU: " << text);
@@ -765,6 +794,29 @@ private:
 		battery_voltage = volt;
 		sys_diag.set(stat);
 		batt_diag.set(volt, curr, rem);
+
+        auto system_status = boost::make_shared<mavros_msgs::SystemStatus>();
+
+        system_status->header.stamp = ros::Time::now();
+        system_status->onboard_control_sensors_present = stat.onboard_control_sensors_present;
+        system_status->onboard_control_sensors_enabled = stat.onboard_control_sensors_enabled;
+        system_status->onboard_control_sensors_health  = stat.onboard_control_sensors_health;
+
+        system_status->load = stat.load;
+
+        system_status->voltage_battery   = stat.voltage_battery;
+        system_status->current_battery   = stat.current_battery;
+        system_status->battery_remaining = stat.battery_remaining;
+
+        system_status->drop_rate_comm = stat.drop_rate_comm;
+        system_status->errors_comm = stat.errors_comm;
+        system_status->errors_count1 = stat.errors_count1;
+        system_status->errors_count2 = stat.errors_count2;
+        system_status->errors_count3 = stat.errors_count3;
+        system_status->errors_count4 = stat.errors_count4;
+
+        system_status_pub.publish(system_status);
+
 
 		if (has_battery_status)
 			return;
