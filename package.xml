@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>heifu_mavros</name>
+  <name>bev_mavros</name>
   <version>0.8.1</version>
   <description>The heifu mavros package</description>
 
