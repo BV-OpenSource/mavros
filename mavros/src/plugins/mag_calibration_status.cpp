@@ -1,18 +1,11 @@
 /**
  * @brief MagCalStatus plugin
  * @file MagCalStatus.cpp
- * @author Vladimir Ermakov <vooon341@gmail.com>
+ * @author André Ferreira <andre.ferreira@beyond-vision.pt>
  *
  * @example MagCalStatus.cpp
  * @addtogroup plugin
  * @{
- */
-/*
- * Copyright 2013,2016 Vladimir Ermakov.
- *
- * This file is part of the mavros package and subject to the license terms
- * in the top-level LICENSE file of the mavros repository.
- * https://github.com/mavlink/mavros/tree/master/LICENSE.md
  */
 
 #include <mavros/mavros_plugin.h>
@@ -54,19 +47,18 @@ public:
 		return {
 			/* automatic message deduction by second argument */
 			make_handler(&MagCalStatusPlugin::handle_status),
-            make_handler(&MagCalStatusPlugin::handle_report),
+			make_handler(&MagCalStatusPlugin::handle_report),
 		};
 	}
 
 private:
 	ros::NodeHandle mcs_nh;
 	ros::Publisher mcs_pub;
-    ros::Publisher mcr_pub;
+	ros::Publisher mcr_pub;
 	uint8_t _rgCompassCalProgress[3] = {0};
-	bool calibration=true;
-    //Send progress of magnetometer calibration
-	void handle_status(const mavlink::mavlink_message_t *msg, mavlink::ardupilotmega::msg::MAG_CAL_PROGRESS &mp) {
-		ROS_INFO_STREAM_NAMED("MagCalStatus", "MagCalStatus::handle_heartbeat: " << mp.to_yaml());
+	bool calibration[3]={true, true, true};
+	//Send progress of magnetometer calibration
+	void handle_status(const mavlink::mavlink_message_t *, mavlink::ardupilotmega::msg::MAG_CAL_PROGRESS &mp) {
 		auto mcs = boost::make_shared<std_msgs::UInt8>();
 
 		// How many compasses are we calibrating?
@@ -79,23 +71,25 @@ private:
 
 		if (mp.compass_id < 3 && compassCalCount != 0) {
 			// Each compass gets a portion of the overall progress
-			_rgCompassCalProgress[mp.compass_id] = mp.completion_pct / compassCalCount;
+			_rgCompassCalProgress[mp.compass_id] = mp.completion_pct;
 		}
 
-		mcs->data = (_rgCompassCalProgress[0] + _rgCompassCalProgress[1] + _rgCompassCalProgress[2]);
+		mcs->data = static_cast<uint8_t>((_rgCompassCalProgress[0] + _rgCompassCalProgress[1] + _rgCompassCalProgress[2])/compassCalCount);
 
 		mcs_pub.publish(mcs);
 	}
+
 	//Send report after calibration is done
-    void handle_report(const mavlink::mavlink_message_t *msg, mavlink::common::msg::MAG_CAL_REPORT &mr) {
-        ROS_INFO_STREAM_NAMED("MagCalReport", "MagCalReport:: " << mr.to_yaml());
-       if(calibration) {
-               auto     mcr = boost::make_shared<mavros_msgs::MagnetometerReporter>();
-               mcr->report = mr.cal_status;
-               mcr->confidence =mr.orientation_confidence;
-               mcr_pub.publish(mcr);
-               calibration=false;
-       }
+	void handle_report(const mavlink::mavlink_message_t *, mavlink::common::msg::MAG_CAL_REPORT &mr) {
+		if(calibration[mr.compass_id]) {
+			auto mcr = boost::make_shared<mavros_msgs::MagnetometerReporter>();
+			mcr->header.stamp = ros::Time::now();
+			mcr->header.frame_id = std::to_string(mr.compass_id);
+			mcr->report = mr.cal_status;
+			mcr->confidence = mr.orientation_confidence;
+			mcr_pub.publish(mcr);
+			calibration[mr.compass_id] = false;
+		}
 	}
 };
 
